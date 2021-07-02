@@ -15,6 +15,43 @@ class XenforoAuthProvider(object):
     def get_supported_login_types(self):
         return {'m.login.password': ('password',)}
 
+    async def check_auth(self, username, login_type, login_dict):
+        password = login_dict['password']
+        if not password:
+            return False
+
+        if not (username.startswith("@xf-") and ":" in username):
+            return False
+
+        # We need to fetch the mail from xf-id
+        uid = username.split(":", 1)[0][4:]
+        if not uid.isdigit():
+            return False
+        headers = {'xf-api-key': self.api_key}
+        r = requests.get(self.endpoint + '/api/users/' + uid, headers=headers)
+        if r.status_code != 200:
+            return False
+        r = r.json()
+        username = r['user']['username']
+
+        payload = {'login': username, 'password': password}
+        headers = {'xf-api-key': self.api_key}
+        r = requests.post(self.endpoint + "/api/auth", data=payload, headers=headers)
+        if r.status_code != 200:
+            return False
+        r = r.json()
+        if r["success"] is not True:
+            return False
+
+        # Prefix with xf as numeric IDs are reserved for guests
+        localpart = "xf-" + str(r['user']['user_id'])
+        user_id = self.account_handler.get_qualified_user_id(localpart)
+        display_name = r['user']['username']
+        if await self.account_handler.check_user_exists(user_id):
+            return user_id
+        user_id, access_token = await self.account_handler.register(localpart=localpart, displayname=display_name)
+        return user_id
+
     async def check_3pid_auth(self, medium, address, password):
         if medium != "email":
             return None
