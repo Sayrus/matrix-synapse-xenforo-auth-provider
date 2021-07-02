@@ -28,7 +28,7 @@ class XenforoAuthProvider(object):
         if r["success"] is not True:
             return False
 
-        user_id = self.account_handler.get_qualified_user_id(r['user']['user_id'])
+        user_id = self.account_handler.get_qualified_user_id(str(r['user']['user_id']))
         display_name = r['user']['username']
         if await self.account_handler.check_user_exists(user_id):
             return user_id
