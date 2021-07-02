@@ -28,12 +28,13 @@ class XenforoAuthProvider(object):
         if r["success"] is not True:
             return False
 
-        localpart = str(r['user']['user_id'])
+        # Prefix with xf as numeric IDs are reserved for guests
+        localpart = "xf-" + str(r['user']['user_id'])
         user_id = self.account_handler.get_qualified_user_id(localpart)
         display_name = r['user']['username']
         if await self.account_handler.check_user_exists(user_id):
             return user_id
-        user_id, access_token = await self.account_handler.register_user(localpart=localpart, displayname=display_name)
+        user_id, access_token = await self.account_handler.register(localpart=localpart, displayname=display_name)
         return user_id
 
     @staticmethod
