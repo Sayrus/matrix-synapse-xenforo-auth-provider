@@ -32,7 +32,7 @@ class XenforoAuthProvider(object):
         display_name = r['user']['username']
         if await self.account_handler.check_user_exists(user_id):
             return user_id
-        user_id, access_token = await self.account_handler.register(localpart=user_id, displayname=display_name)
+        user_id, access_token = await self.account_handler.register_user(localpart=user_id, displayname=display_name)
         return user_id
 
     @staticmethod
