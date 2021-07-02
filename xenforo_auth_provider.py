@@ -32,6 +32,18 @@ class XenforoAuthProvider(object):
 
     @staticmethod
     def parse_config(config):
-        if not config.endpoint:
+        class _XenforoConfig(object):
+            endpoint = ''
+            api_key = ''
+
+        xf_config = _XenforoConfig()
+
+        if not config['endpoint']:
             raise Exception("Missing endpoint config")
-        return config
+
+        xf_config.endpoint = config["endpoint"]
+        try:
+            xf_config.api_key = config["api_key"]
+        except (TypeError, KeyError):
+            pass
+        return xf_config
