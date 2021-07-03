@@ -1,10 +1,11 @@
 import os
 import requests
 
+
 class XenforoApi:
     def __init__(self, api_key: str, endpoint: str):
         self.endpoint = endpoint
-        self.auth_headers = {'xf-api-key': self.api_key}
+        self.auth_headers = {'xf-api-key': api_key}
 
     def post_auth(self, login: str, password: str):
         payload = {'login': login, 'password': password}
