@@ -105,11 +105,11 @@ class XenforoAuthProvider(object):
         await profile_handler.set_displayname(user_id, fake_requester, r['user']['username'], True)
 
         new_avatar_url = r['user']['avatar_urls']['l']
-        avatar_cache = account_data_handler._store.get_global_account_data_by_type_for_user('xenforo.avatar', user_id.localpart)
+        avatar_cache = await account_data_handler._store.get_global_account_data_by_type_for_user('xenforo.avatar', user_id.localpart)
         if avatar_cache['original_url'] != new_avatar_url:
             # This is a new avatar
             r = requests.get(new_avatar_url)
-            avatar_url = media_repository.create_content(
+            avatar_url = await media_repository.create_content(
                 r.headers['Content-Type'] or 'image/png',
                 None,
                 io.BytesIO(r.content),
