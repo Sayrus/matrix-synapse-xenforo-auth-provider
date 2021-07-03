@@ -1,5 +1,6 @@
 import os
 import requests
+from synapse.types import UserID, create_requester
 
 
 class XenforoApi:
@@ -66,7 +67,7 @@ class XenforoAuthProvider(object):
 
         if not await self.account_handler.check_user_exists(user_id):
             user_id, access_token = await self.account_handler.register(localpart=localpart, displayname=display_name)
-        self.sync_user_profile(localpart, r)
+        await self.sync_user_profile(user_id, localpart, r)
         return user_id
 
     async def check_3pid_auth(self, medium, address, password):
@@ -84,14 +85,22 @@ class XenforoAuthProvider(object):
         if not await self.account_handler.check_user_exists(user_id):
             user_id, access_token = await self.account_handler.register(localpart=localpart, displayname=display_name)
 
-        self.sync_user_profile(localpart, r)
+        await self.sync_user_profile(user_id, localpart, r)
         return user_id
 
-    def sync_user_profile(self, localpart, r):
-        store = self.account_handler._hs.get_profile_handler().store
+    async def sync_user_profile(self, user_id, localpart, r):
+        profile_handler = self.account_handler._hs.get_profile_handler()
+        server_name = self.account_handler._hs.hostname
         # Ideally, there is a better way for these as we access a protected member
-        store.set_profile_displayname(localpart, r['user']['username'])
-        store.set_profile_avatar_url(localpart, r['user']['avatar_urls']['o'])
+        user_id = UserID.from_string(user_id)
+        fake_requester = create_requester(
+            user_id,
+            authenticated_entity=server_name
+        )
+
+        await profile_handler.set_displayname(user_id, fake_requester, r['user']['username'], True)
+        # FIXME: Requires MXC URL instead of Xenforo URL
+        # await profile_handler.set_avatar_url(user_id, fake_requester, r['user']['avatar_urls']['l'], True)
 
     @staticmethod
     def parse_config(config):
