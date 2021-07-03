@@ -1,3 +1,4 @@
+import io
 import os
 import requests
 from synapse.types import UserID, create_requester
@@ -91,6 +92,9 @@ class XenforoAuthProvider(object):
     async def sync_user_profile(self, user_id, localpart, r):
         profile_handler = self.account_handler._hs.get_profile_handler()
         server_name = self.account_handler._hs.hostname
+        account_data_handler = self.account_handler._hs.get_account_data_handler()
+        media_repository = self.account_handler._hs.get_media_repository()
+
         # Ideally, there is a better way for these as we access a protected member
         user_id = UserID.from_string(user_id)
         fake_requester = create_requester(
@@ -99,8 +103,21 @@ class XenforoAuthProvider(object):
         )
 
         await profile_handler.set_displayname(user_id, fake_requester, r['user']['username'], True)
-        # FIXME: Requires MXC URL instead of Xenforo URL
-        # await profile_handler.set_avatar_url(user_id, fake_requester, r['user']['avatar_urls']['l'], True)
+
+        new_avatar_url = r['user']['avatar_urls']['l']
+        avatar_cache = account_data_handler.store.get_global_account_data_by_type_for_user('xenforo.avatar', user_id)
+        if avatar_cache != new_avatar_url:
+            # This is a new avatar
+            r = requests.get(new_avatar_url)
+            avatar_url = media_repository.create_content(
+                r.headers['Content-Type'] or 'image/png',
+                None,
+                io.StringIO(r.content),
+                len(r.content),
+                user_id
+            )
+            await profile_handler.set_avatar_url(user_id, fake_requester, avatar_url, True)
+            account_data_handler.add_account_data_for_user(user_id, 'xenforo.avatar', new_avatar_url)
 
     @staticmethod
     def parse_config(config):
