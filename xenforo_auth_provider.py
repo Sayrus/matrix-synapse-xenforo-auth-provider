@@ -112,7 +112,7 @@ class XenforoAuthProvider(object):
             avatar_url = media_repository.create_content(
                 r.headers['Content-Type'] or 'image/png',
                 None,
-                io.StringIO(r.content),
+                io.BytesIO(r.content),
                 len(r.content),
                 user_id
             )
