@@ -117,7 +117,7 @@ class XenforoAuthProvider(object):
                 user_id
             )
             await profile_handler.set_avatar_url(user_id, fake_requester, avatar_url, True)
-            account_data_handler.add_account_data_for_user(user_id, 'xenforo.avatar', new_avatar_url)
+            account_data_handler.add_account_data_for_user(user_id.localpart, 'xenforo.avatar', new_avatar_url)
 
     @staticmethod
     def parse_config(config):
