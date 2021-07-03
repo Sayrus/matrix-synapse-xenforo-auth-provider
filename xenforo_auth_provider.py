@@ -106,7 +106,7 @@ class XenforoAuthProvider(object):
 
         new_avatar_url = r['user']['avatar_urls']['l']
         avatar_cache = account_data_handler._store.get_global_account_data_by_type_for_user('xenforo.avatar', user_id)
-        if avatar_cache != new_avatar_url:
+        if avatar_cache['original_url'] != new_avatar_url:
             # This is a new avatar
             r = requests.get(new_avatar_url)
             avatar_url = media_repository.create_content(
@@ -117,7 +117,7 @@ class XenforoAuthProvider(object):
                 user_id
             )
             await profile_handler.set_avatar_url(user_id, fake_requester, avatar_url, True)
-            account_data_handler.add_account_data_for_user(user_id.localpart, 'xenforo.avatar', new_avatar_url)
+            account_data_handler.add_account_data_for_user(user_id.localpart, 'xenforo.avatar', {'original_url': new_avatar_url})
 
     @staticmethod
     def parse_config(config):
