@@ -66,7 +66,7 @@ class XenforoAuthProvider(object):
 
         if not await self.account_handler.check_user_exists(user_id):
             user_id, access_token = await self.account_handler.register(localpart=localpart, displayname=display_name)
-        self.account_handler.set_profile_avatar_url(localpart, r['user']['avatar_urls'])
+        self.sync_user_profile(localpart, r)
         return user_id
 
     async def check_3pid_auth(self, medium, address, password):
@@ -83,8 +83,15 @@ class XenforoAuthProvider(object):
         display_name = r['user']['username']
         if not await self.account_handler.check_user_exists(user_id):
             user_id, access_token = await self.account_handler.register(localpart=localpart, displayname=display_name)
-        self.account_handler.set_profile_avatar_url(localpart, r['user']['avatar_urls'])
+
+        self.sync_user_profile(localpart, r)
         return user_id
+
+    def sync_user_profile(self, localpart, r):
+        store = self.account_handler._hs.get_profile_handler().store
+        # Ideally, there is a better way for these as we access a protected member
+        store.set_profile_displayname(localpart, r['user']['username'])
+        store.set_profile_avatar_url(localpart, r['user']['avatar_urls']['o'])
 
     @staticmethod
     def parse_config(config):
