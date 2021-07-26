@@ -57,27 +57,18 @@ class XenforoAuthProvider(object):
         r = self.api.get_user_from_uid(uid)
         username = r['user']['username']
 
-        r = self.api.post_auth(username, password)
-        if r is False:
-            return False
-
-        # Prefix with xf as numeric IDs are reserved for guests
-        localpart = "xf-" + str(r['user']['user_id'])
-        user_id = self.account_handler.get_qualified_user_id(localpart)
-        display_name = r['user']['username']
-
-        if not await self.account_handler.check_user_exists(user_id):
-            user_id, access_token = await self.account_handler.register(localpart=localpart, displayname=display_name)
-        await self.sync_user_profile(user_id, localpart, r)
-        return user_id
+        return await self.login_or_default(username, password)
 
     async def check_3pid_auth(self, medium, address, password):
         if medium != "email":
             return None
 
-        r = self.api.post_auth(address, password)
+        return await self.login_or_default(address, password)
+
+    async def login_or_default(self, login, password, default=False):
+        r = self.api.post_auth(login, password)
         if r is False:
-            return False
+            return default
 
         # Prefix with xf as numeric IDs are reserved for guests
         localpart = "xf-" + str(r['user']['user_id'])
@@ -105,19 +96,20 @@ class XenforoAuthProvider(object):
         await profile_handler.set_displayname(user_id, fake_requester, r['user']['username'], True)
 
         new_avatar_url = r['user']['avatar_urls']['l']
-        avatar_cache = await account_data_handler._store.get_global_account_data_by_type_for_user('xenforo.avatar', user_id.localpart)
-        if avatar_cache is None or avatar_cache['original_url'] != new_avatar_url:
-            # This is a new avatar
-            r = requests.get(new_avatar_url)
-            avatar_url = await media_repository.create_content(
-                r.headers['Content-Type'] or 'image/png',
-                None,
-                io.BytesIO(r.content),
-                len(r.content),
-                user_id
-            )
-            await profile_handler.set_avatar_url(user_id, fake_requester, avatar_url, True)
-            await account_data_handler.add_account_data_for_user(user_id.localpart, 'xenforo.avatar', {'original_url': new_avatar_url})
+        if new_avatar_url is not None:
+            avatar_cache = await account_data_handler._store.get_global_account_data_by_type_for_user('xenforo.avatar', user_id.localpart)
+            if avatar_cache is None or avatar_cache['original_url'] != new_avatar_url:
+                # This is a new avatar
+                r = requests.get(new_avatar_url)
+                avatar_url = await media_repository.create_content(
+                    r.headers['Content-Type'] or 'image/png',
+                    None,
+                    io.BytesIO(r.content),
+                    len(r.content),
+                    user_id
+                )
+                await profile_handler.set_avatar_url(user_id, fake_requester, avatar_url, True)
+                await account_data_handler.add_account_data_for_user(user_id.localpart, 'xenforo.avatar', {'original_url': new_avatar_url})
 
     @staticmethod
     def parse_config(config):
